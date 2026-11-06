@@ -17,7 +17,7 @@ async function register(req, res) {
       process.env.JWT_SECRET,
       { expiresIn: "3d" },
 
-      res.cookies("token", token, {
+      res.cookie("token", token, {
         httpOnly: true,
 
         secure: process.env.NODE_ENV === "production",
@@ -43,6 +43,35 @@ async function register(req, res) {
   }
 }
 
+async function login(req, res) {
+  const { email, password } = req.body;
+
+  const user = await userModel.findOne({ email }).select("+password")
+
+  if (!user) {
+    return res.status(401).json({ message: "Email or password is INVALID" });
+  }
+
+  const isValidPassword = user.comparePassword(password);
+  if (!isValidPassword) {
+    return res.status(401).json({ message: "Email or Password is INVALID" });
+  }
+
+  const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
+    expiresIn: "1h",
+  });
+
+  res.cookie("token", token);
+
+  res.status(200).json({
+    _id: user._id,
+    email: user.email,
+    name: user.name,
+  });
+
+}
+
 module.exports = {
   register,
+  login,
 };
